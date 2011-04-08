@@ -1,0 +1,30 @@
+/*
+let 
+  op _:bool ? _:string : _:string on cond val1 val2 = if cond then val1 else val2 
+		in  
+			( 1 == 1 ) ? "acertou" : "errou"
+			
+
+  
+
+1 + ((1 + 1) + 1)
+
+ 
+let op _:int ++ on x = x + 1 in
+ let op ++ _:int on x = x++ in
+   (++((++1) + (2++)))++
+   
+
+
+let op -_:int on x = (x-x)-x in
+    (-3)==(3-6)
+
+
+   
+let fun add x = fn y . x + y in
+	let var id = add(0), var x = 4 
+		in 
+			id(1) + x
+*/		
+
+("estou" + " ") + "testando"

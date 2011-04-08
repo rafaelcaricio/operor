@@ -1,0 +1,1225 @@
+options {
+
+//  LOOKAHEAD = 6;
+DEBUG_PARSER = true;
+//  FORCE_LA_CHECK = true; 
+
+  JAVA_UNICODE_ESCAPE = true;
+
+}
+
+
+
+PARSER_BEGIN(OperORParser)
+
+package plp.operor.parser;
+
+import java.util.ArrayList;
+
+import java.util.List; 
+
+
+//Imports da Funcional1
+import plp.functional1.declaration.DeclaracaoFuncional;
+import plp.functional1.declaration.DecVariavel;
+import plp.functional1.expression.IfThenElse;
+
+//Imports da Expressao
+import plp.expressions2.expression.Expressao;
+import plp.expressions2.expression.Valor;
+import plp.expressions2.expression.ValorInteiro;
+import plp.expressions2.expression.ValorString;
+import plp.expressions2.expression.ValorBooleano;
+import plp.expressions2.expression.Id;
+
+//Imports da OperOR
+import plp.operor.declaration.*;
+import plp.operor.expression.*;
+import plp.operor.util.*;
+import plp.operor.*;
+import plp.expressions1.util.*;
+
+//Imports da Expressao1
+
+public class OperORParser {
+
+    public static void main(String args[]) {
+
+	    OperORParser parser;
+
+	    if (args.length == 0) {
+
+	    	System.out.println("OperOR PLP Parser Version 0.0.1:  Reading from standard input . . .");
+
+	    	parser = new OperORParser(System.in);
+
+	    } else if (args.length == 1) {
+
+	    	System.out.println("OperOR PLP Parser Version 0.0.1:  Reading from file " + args[0] + " . . .");
+
+	    	try {
+
+	    		parser = new OperORParser(new java.io.FileInputStream(args[0]));
+
+	    	} catch (java.io.FileNotFoundException e) {
+
+	        	System.out.println("OperOR PLP Parser Version 0.0.1:  File " + args[0] + " not found.");
+
+	        	return;
+
+	    	}
+
+	    } else {
+
+	    	System.out.println("OperOR PLP Parser Version 0.0.1:  Usage is one of:");
+
+	    	System.out.println("         java OperORParser < inputfile");
+
+	    	System.out.println("OR");
+
+	    	System.out.println("         java OperORParser inputfile");
+
+	    	return;
+
+	    }
+
+	    Programa programa = null;
+
+	    try {
+
+	    	programa = parser.Input();
+
+	    	System.out.println("OperOR PLP Parser Version 0.0.1: OperOR program parsed successfully.");
+
+	    } catch (ParseException e) {
+
+	    	e.printStackTrace();
+
+	    	System.out.println("OperOR PLP Parser Version 0.0.1: Encountered errors during parse.");
+
+	    	System.exit(0);
+
+	    }
+
+	    try {
+
+	    	System.out.println("OperOR PLP Parser Version 0.0.1: running...");
+
+	    	Valor val = (Valor)programa.executar();
+
+	    	if (val instanceof ValorString) {
+
+	    		ValorString valStr = (ValorString) val;
+
+		    	System.out.println("OperOR1 PLP Parser Version 0.0.1: resultado="+valStr.valor());
+
+	    	} else if (val instanceof ValorInteiro) {
+
+	    	    ValorInteiro valInt = (ValorInteiro) val;
+
+		    	System.out.println("OperOR PLP Parser Version 0.0.1: resultado="+valInt.valor());
+
+		    } else if (val instanceof ValorBooleano) {
+
+		        ValorBooleano valBool = (ValorBooleano) val;
+
+		    	System.out.println("OperOR PLP Parser Version 0.0.1: resultado="+valBool.valor());
+
+		    } else if (val instanceof ValorFuncao) {
+
+		        ValorFuncao valFunc = (ValorFuncao) val;
+
+		    	System.out.println("OperOR PLP Parser Version 0.0.1: resultado = " + val);
+
+		    }
+
+	   	} catch (Exception e) {
+
+	    	e.printStackTrace();
+
+	    	System.out.println("OperOR PLP Parser Version 0.0.1:  Encountered errors during execution.");
+
+	    }
+
+	}
+
+}
+
+
+
+PARSER_END(OperORParser)
+
+
+
+
+
+SKIP : /* WHITE SPACE */
+
+{
+
+  " "
+
+| "\t"
+
+| "\n"
+
+| "\r"
+
+| "\f"
+
+}
+
+
+
+SPECIAL_TOKEN : /* COMMENTS */
+
+{
+
+  <SINGLE_LINE_COMMENT: "//" (~["\n","\r"])* ("\n"|"\r"|"\r\n")>
+
+| <FORMAL_COMMENT: "/**" (~["*"])* "*" ("*" | (~["*","/"] (~["*"])* "*"))* "/">
+
+| <MULTI_LINE_COMMENT: "/*" (~["*"])* "*" ("*" | (~["*","/"] (~["*"])* "*"))* "/">
+
+}
+
+
+
+TOKEN : /* TOKENS DE FUNCIONAL 2 */
+
+{
+
+< TRUE          : "true" >
+
+| < FALSE       : "false" >
+
+| < LET			: "let" >
+
+| < VAR			: "var" >
+
+| < IN			: "in" >
+
+| < IF			: "if" >
+
+| < THEN		: "then" >
+
+| < ELSE		: "else" >
+
+| < FUNC		: "fun" >
+
+| < FN	        : "fn" >
+
+| < OP          : "op" >
+
+| < ON			: "on" >
+
+| < OPERAND_LOCATION : "_:" > 
+
+}
+
+TOKEN : /* TYPES */
+
+{
+
+< INT			: "int" >
+	
+|	< BOOL		: "bool" >
+
+|	< STRING	: "string" >
+
+|	< FUNCTION 	: "func" >
+
+}
+
+
+
+TOKEN : /* LITERALS */
+
+{
+
+  < INTEGER_LITERAL:
+
+        <DECIMAL_LITERAL> (["l","L"])?
+
+      | <HEX_LITERAL> (["l","L"])?
+
+      | <OCTAL_LITERAL> (["l","L"])?
+
+  >
+
+|
+
+  < #DECIMAL_LITERAL: ["1"-"9"] (["0"-"9"])* >
+
+|
+
+  < #HEX_LITERAL: "0" ["x","X"] (["0"-"9","a"-"f","A"-"F"])+ >
+
+|
+
+  < #OCTAL_LITERAL: "0" (["0"-"7"])* >
+
+|
+
+  < STRING_LITERAL:
+
+      "\""
+
+      (   (~["\"","\\","\n","\r"])
+
+        | ("\\"
+
+            ( ["n","t","b","r","f","\\","'","\""]
+
+            | ["0"-"7"] ( ["0"-"7"] )?
+
+            | ["0"-"3"] ["0"-"7"] ["0"-"7"]
+
+            )
+
+          )
+
+      )*
+
+      "\""
+
+  >
+|
+	<ABSTRACT_LITERAL : "_">
+
+}
+
+
+
+TOKEN : /* IDENTIFIERS */
+
+{
+
+  < IDENTIFIER: <LETTER> (<LETTER>|<DIGIT>)* >
+
+|
+
+  < #LETTER:
+
+      [
+
+       "\u0024",
+
+       "\u0041"-"\u005a",
+
+       "\u005f",
+
+       "\u0061"-"\u007a",
+
+       "\u00c0"-"\u00d6",
+
+       "\u00d8"-"\u00f6",
+
+       "\u00f8"-"\u00ff",
+
+       "\u0100"-"\u1fff",
+
+       "\u3040"-"\u318f",
+
+       "\u3300"-"\u337f",
+
+       "\u3400"-"\u3d2d",
+
+       "\u4e00"-"\u9fff",
+
+       "\uf900"-"\ufaff"
+
+      ]
+
+  >
+
+|
+
+  < #DIGIT:
+
+      [
+
+       "\u0030"-"\u0039",
+
+       "\u0660"-"\u0669",
+
+       "\u06f0"-"\u06f9",
+
+       "\u0966"-"\u096f",
+
+       "\u09e6"-"\u09ef",
+
+       "\u0a66"-"\u0a6f",
+
+       "\u0ae6"-"\u0aef",
+
+       "\u0b66"-"\u0b6f",
+
+       "\u0be7"-"\u0bef",
+
+       "\u0c66"-"\u0c6f",
+
+       "\u0ce6"-"\u0cef",
+
+       "\u0d66"-"\u0d6f",
+
+       "\u0e50"-"\u0e59",
+
+       "\u0ed0"-"\u0ed9",
+
+       "\u1040"-"\u1049"
+
+      ]
+
+  >
+
+}
+
+TOKEN : /* SEPARATORS */
+
+{
+
+  < LPAREN: "(" >
+
+| < RPAREN: ")" >
+
+| < SEMICOLON: ";" >
+
+| < COMMA: "," >
+
+| < DOT: "." >
+
+}
+
+TOKEN : /* OPERATORS */{
+
+  < ASSIGN: "=" >
+  //<IDENTIFIER> |
+| < OPERATOR: (  <SYMBOL> | ( "/" (~[ "/", "*" ]) ) )+ >
+
+| < #SYMBOL:
+	[
+	 "+",
+	 "-",
+	 "&",
+	 "^",
+	 "=",
+	 "!",
+	 "@",
+	 "#",
+	 "$",
+	 "%",
+	 "~",
+	 "<",
+	 ">",
+	 "?",
+	 ":",
+	 "*",
+	 "|",
+	 "\\",
+	 "{",
+	 "}",
+	 "]",
+	 "["
+	]
+  >  
+}
+
+Programa Input() :
+
+{
+
+    Programa retorno;
+
+}
+
+{
+
+   retorno = PPrograma() <EOF>
+
+   {
+
+	return retorno;
+
+   }
+
+}
+
+Valor PValorAbstrato() :
+{
+	Token token;
+	
+}
+{
+	token = <ABSTRACT_LITERAL>
+	
+	{
+		return new ValorDesconhecido();		
+	}
+}
+
+Valor PValorInteiro() :
+
+{
+
+	Token token;
+
+}
+
+{
+
+	token = <INTEGER_LITERAL>
+
+	{
+
+		//System.out.println("ValorInteiro=" + token.toString());
+
+		return new ValorInteiro(Integer.parseInt(token.toString()));
+
+	}
+
+}
+
+
+
+Valor PValorBooleano() :
+
+{
+
+}
+
+{
+
+	  <FALSE> { return new ValorBooleano(false); }
+
+	| <TRUE>  { return new ValorBooleano(true); }
+
+}
+
+
+
+Valor PValorString() :
+
+{
+
+	Token token;
+
+}
+
+{
+
+	token = <STRING_LITERAL>
+
+	{
+
+//		System.out.println("ValorString=" + token.toString().length());
+
+		String tokenStr = token.toString();
+
+		tokenStr = tokenStr.substring(1,tokenStr.length()-1);
+
+		return new ValorString(tokenStr);
+
+	}
+
+}
+
+
+
+Valor PValorFuncao() :
+
+{
+
+	List lista = null;
+
+	Expressao expressao;
+
+}
+
+{
+
+	<FN> lista = PListaId() <DOT> expressao = PExpressao()
+
+	{
+
+		return new ValorFuncao(lista, expressao);
+
+	}
+
+}
+
+
+
+Valor PValor() :
+
+{
+
+	Valor retorno;
+
+}
+
+{
+
+	(
+
+    retorno = PValorInteiro()
+
+	| retorno = PValorBooleano()
+
+	| retorno = PValorString()
+
+    | retorno = PValorFuncao()
+    
+    | retorno = PValorAbstrato()
+
+    )
+
+
+
+	{
+
+		return retorno;
+
+	}
+
+}
+
+
+
+Id PId() :
+
+{
+
+	Token token;
+
+}
+
+{
+
+	token = <IDENTIFIER>
+
+	{
+
+		//System.out.println("Id=" + token.toString());
+
+		//System.out.println("tam id=" + token.toString().length());
+
+		String tokenStr = token.toString();
+
+//		tokenStr = tokenStr.substring(1,tokenStr.length()-1);
+
+		return new Id(tokenStr);
+
+	}
+
+}
+
+
+
+Expressao PExpPrimaria() :
+{
+    Expressao retorno;
+	IdOperador operador;
+	ListIdOperador<Expressao> listaOperadores;
+}
+{
+	(
+	
+	  retorno = PValor()
+	  
+	| LOOKAHEAD (PId() <LPAREN> ) 
+	    retorno = PAplicacao()
+	| retorno = PId()
+	
+	| <LPAREN> retorno = PExpressao() <RPAREN>
+	
+	)
+	{
+		return retorno;
+	}
+}
+
+
+Expressao PAplicacao() :
+{
+	Id id;
+	List lista;	
+}
+{
+	id = PId() <LPAREN> lista = PListaExpr() <RPAREN>
+	{
+		return new Aplicacao(id, lista);
+	}
+}
+
+IdOperador PIdOperador() :
+{
+	Token token;
+}
+{
+	token = <OPERATOR>
+	{
+		return new IdOperador(token.toString());
+	}
+}
+
+Tipo PTipoOperador() :
+
+{
+	Tipo retorno;
+}
+{
+	(
+		<INT>
+		{
+			retorno = TipoPrimitivo.INTEIRO;
+		}
+		| <BOOL>
+		{
+			retorno = TipoPrimitivo.BOOLEANO;
+		}
+		| <STRING>
+		{
+			retorno = TipoPrimitivo.STRING;
+		}
+	)
+	{
+		return retorno;
+	}
+}
+
+
+ListIdOperador PListaIdOperador() :
+
+{
+	ListIdOperador retorno = null;
+	ListIdOperador recursao= null;
+	IdOperador operador=null, operador1=null;
+	Tipo tipo=null, tipo1=null;
+}
+{
+	(   
+			operador = PIdOperador() <OPERAND_LOCATION> tipo = PTipoOperador() [ LOOKAHEAD(2) operador1 = PIdOperador() ]
+			{
+				if (recursao == null) {
+					recursao = new ListIdOperador<Tipo>();
+				}
+				recursao.addIdOperador(operador);
+				recursao.addElemento(tipo);
+				if (operador1 != null) {
+					recursao.addIdOperador(operador1);
+					operador1 = null;
+				}
+			}
+		
+		| 
+			<OPERAND_LOCATION> tipo = PTipoOperador() operador = PIdOperador() [ LOOKAHEAD(3) <OPERAND_LOCATION> tipo1 = PTipoOperador() ]
+			{
+				if (recursao == null) {
+					recursao = new ListIdOperador<Tipo>();
+				}
+				recursao.addElemento(tipo);
+				recursao.addIdOperador(operador);
+				if (tipo1 != null) {
+					recursao.addElemento(tipo1);
+					tipo1 = null;
+				}
+			}
+	)+
+	
+	{
+		if (retorno == null) {
+			retorno = new ListIdOperador<Tipo>();
+		}
+		for (Object o : recursao.getListaOrdenacao()) {
+			if (o instanceof Tipo) {
+				retorno.addElemento((Tipo)o);
+			} else if (o instanceof IdOperador) {
+				retorno.addIdOperador((IdOperador)o);
+			}
+		}
+		return retorno;
+	}
+}
+
+List PListaId() :
+
+{
+
+	List retorno = null;
+
+	Id id;
+
+}
+
+{
+
+    (
+
+      id = PId()
+
+      {
+
+         if (retorno == null) {
+
+             retorno = new ArrayList();
+
+             retorno.add(id);
+
+         } else {
+
+             retorno.add(id);
+
+         }
+
+      }
+
+    )*
+
+
+
+    {
+
+        return retorno;
+
+    }
+
+}
+
+
+
+DeclaracaoFuncional PDeclVar() :
+
+{
+
+	Id id;
+
+	Expressao expressao;
+
+	DeclaracaoFuncional retorno;
+
+}
+
+{
+
+	(
+
+	  <VAR> id = PId() <ASSIGN> expressao = PExpressao()
+
+	)
+
+	{
+
+		return new DecVariavel(id, expressao);
+
+	}
+
+}
+
+
+
+DeclaracaoFuncional PDeclFuncao() :
+
+{
+
+	Id id;
+
+	Expressao expressao;
+
+	DeclaracaoFuncional retorno;
+
+	List lista;
+
+}
+
+{
+
+	(
+
+	  <FUNC> id = PId() lista = PListaId() <ASSIGN> expressao = PExpressao()
+
+	)
+
+	{
+
+		return new DecFuncao(id, new ValorFuncao(lista, expressao));
+
+	}
+
+}
+
+
+
+DeclaracaoFuncional PDecOperador() :
+
+{
+	DeclaracaoFuncional retorno;
+	ListIdOperador listaOperadores;
+	List argsId;
+	Expressao exp;
+}
+{
+	<OP> listaOperadores = PListaIdOperador() <ON> argsId = PListaId() <ASSIGN> exp = PExpressao()
+	{
+		ValorFuncao valorFuncao = new ValorFuncao(argsId, exp);	
+		valorFuncao.setTiposParamentros(listaOperadores.getListaElementos());
+		return new DecOperador(listaOperadores, valorFuncao);
+	} 
+}
+
+
+
+List PDeclFuncional() :
+
+{
+
+	List retorno=null;
+
+	DeclaracaoFuncional dec;
+
+}
+
+{
+
+	(
+
+	  dec = PDeclVar()
+
+	|
+
+	  dec = PDeclFuncao()
+	
+	|
+	
+	  dec = PDecOperador()
+
+	)
+
+	  {
+
+         retorno = new ArrayList();
+
+         retorno.add(dec);
+
+	  }
+
+	(
+
+	(
+
+	  LOOKAHEAD(<COMMA> <VAR>)
+
+	  <COMMA> dec = PDeclVar()
+
+	|
+
+	  LOOKAHEAD(<COMMA> <FUNC>)
+
+	  <COMMA> dec = PDeclFuncao()
+
+	
+	|
+
+	  LOOKAHEAD(<COMMA> <OP>)
+	
+	  <COMMA> dec = PDecOperador()
+
+	)
+
+	  {
+
+	     retorno.add(dec);
+
+	  }
+
+	) *
+
+	{
+
+	    return retorno;
+
+	}
+
+}
+
+
+
+Expressao PExpDeclaracao() :
+
+{
+
+	List declaracoes;
+
+	Expressao expressao;
+
+}
+
+{
+
+	<LET> declaracoes = PDeclFuncional() <IN> expressao = PExpressao()
+
+	{
+
+		return new ExpDeclaracao(declaracoes, expressao);
+
+	}
+
+}
+
+
+
+Expressao PExpCondicional() :
+
+{
+
+	Expressao expCond, expThen, expElse;
+
+}
+
+{
+
+	<IF> expCond = PExpressao() <THEN> expThen = PExpressao()
+
+	<ELSE> expElse = PExpressao()
+
+	{
+
+		return new IfThenElse(expCond, expThen, expElse);
+
+	}
+
+}
+
+
+
+
+
+
+
+List PListaExpr() :
+
+{
+
+	List retorno = null;
+
+	Expressao expr;
+
+}
+
+{
+
+
+
+    (
+
+      expr = PExpressao()
+
+        {
+
+            retorno = new ArrayList();
+
+            retorno.add(expr);
+
+        }
+
+      ( <COMMA> expr = PExpressao()
+
+        {
+
+            retorno.add(expr);
+
+        }
+
+      )*
+
+    )
+
+    {
+
+        return retorno;
+
+    }
+
+}
+
+
+
+Expressao PExpUnaria() :
+
+{
+
+	Expressao retorno, param;
+	IdOperador operador;
+	ListIdOperador<Expressao> listaOperadores;
+
+}
+
+{
+
+	(
+
+	   operador = PIdOperador() param = PExpPrimaria()
+	   
+	   {
+	   		
+        	listaOperadores = new ListIdOperador<Expressao>();
+        	listaOperadores.addIdOperador(operador);
+        	listaOperadores.addElemento(param);
+	  		retorno = new Operacao(listaOperadores);
+	   		System.out.println("Operacao=> " + retorno);
+	   }
+
+	|
+
+	  LOOKAHEAD (PExpDeclaracao())
+
+	  retorno = PExpDeclaracao()
+
+	|
+
+	  LOOKAHEAD (PExpCondicional())
+
+	  retorno = PExpCondicional()
+
+	|
+
+	  LOOKAHEAD (PExpPrimaria())
+
+	  retorno = PExpPrimaria()
+
+	)
+
+	{
+
+		//System.out.println("ExpressaoUnaria=" + retorno);
+
+		return retorno;
+
+	}
+
+}
+
+
+
+Expressao PExpBinaria() :
+
+{
+
+	Expressao retorno = null, first = null, param = null;
+	Id id;
+	Operacao operacao;
+	IdOperador operador;
+	ListIdOperador<Expressao> listaOperadores;
+
+	List list = null;
+
+}
+
+{
+
+	(
+
+	first = PExpUnaria()
+	
+	(
+	  
+	  operador = PIdOperador() param = PExpUnaria()
+
+	  {
+        
+        
+        if (retorno != null && retorno instanceof Operacao) {
+        	operacao = (Operacao) retorno;
+        	operacao.getListaOperadores().addIdOperador(operador);
+        	operacao.getListaOperadores().addElemento(param);
+        } else {
+        	listaOperadores = new ListIdOperador<Expressao>();
+        	if (retorno == null) {
+        		listaOperadores.addElemento(first);
+        	} else {
+        		listaOperadores.addElemento(retorno);
+        	}
+        	listaOperadores.addIdOperador(operador);
+        	listaOperadores.addElemento(param);
+	  		retorno = new Operacao(listaOperadores);
+        }
+        
+	  }
+
+	|
+	  
+	  <LPAREN> [list = PListaExpr()] <RPAREN>
+
+          {
+
+			if (retorno == null) {
+				retorno = first;
+			}
+	        retorno = new Aplicacao((Expressao)retorno, list);
+
+          }
+
+	)*
+
+	)
+
+	{
+
+		if (retorno == null) {
+			retorno = first;
+		}
+		
+		System.out.println("ExpressaoBinaria=" + retorno);
+
+		return retorno;
+
+	}
+
+}
+
+
+
+Expressao PExpressao() :
+
+{
+
+	Expressao retorno;
+
+}
+
+{
+
+	retorno = PExpBinaria()
+
+	{
+
+		return retorno;
+
+	}
+
+}
+
+
+
+Programa PPrograma() :
+
+{
+
+	Expressao retorno;
+
+}
+
+{
+
+	retorno = PExpressao()
+
+	{
+
+		//System.out.println("Expressao=" + retorno);
+
+		return new Programa(retorno);
+
+	}
+
+}
+

@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<project name="plp" default="compile" basedir=".">
+
+	<property name="src" value="src" />
+	<property name="test.src" value="test" />
+	<property name="build" value="bin" />
+	<property name="html" value="html" />
+
+	<target name="init">
+		<mkdir dir="${build}" />
+	</target>
+
+	<target name="javacc" depends="init">
+		<java classpath="lib/javacc.jar" classname="javacc">
+			<arg value="-OUTPUT_DIRECTORY=${src}/plp/expressions1/parser" />
+			<arg value="${src}/plp/expressions1/parser/Expressoes1.jj" />
+		</java>
+		<java classpath="lib/javacc.jar" classname="javacc">
+			<arg value="-OUTPUT_DIRECTORY=${src}/plp/expressions2/parser" />
+			<arg value="${src}/plp/expressions2/parser/Expressoes2.jj" />
+		</java>
+		<java classpath="lib/javacc.jar" classname="javacc">
+			<arg value="-OUTPUT_DIRECTORY=${src}/plp/functional1/parser" />
+			<arg value="${src}/plp/functional1/parser/Functional1.jj" />
+		</java>
+		<java classpath="lib/javacc.jar" classname="javacc">
+			<arg value="-OUTPUT_DIRECTORY=${src}/plp/functional2/parser" />
+			<arg value="${src}/plp/functional2/parser/Funcional2.jj" />
+		</java>
+		<java classpath="lib/javacc.jar" classname="javacc">
+			<arg value="-OUTPUT_DIRECTORY=${src}/plp/functional3/parser" />
+			<arg value="${src}/plp/functional3/parser/Funcional3.jj" />
+		</java>
+	</target>
+
+	<target name="compile" depends="javacc">
+		<!-- Compile the java code -->
+
+		<javac srcdir="${src}" destdir="${build}" />
+	</target>
+
+	<target name="java2html" description="Converte o codigo para html para facilitar a visualizacao na aula">
+		<taskdef name="java2html" classname="de.java2html.anttasks.Java2HtmlTask" classpath="lib/java2html.jar" />
+		<java2html srcdir="${src}" destdir="${html}" 
+			includes="**/*.java" style="eclipse" 
+			showLineNumbers="true" 
+			showFileName="true"  />
+	</target>
+</project>
